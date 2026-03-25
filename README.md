@@ -16,3 +16,15 @@
 - Sistema de autenticación
 - JWT
 - Login/Registro
+
+📋 CHECKLIST FINAL DEL DÍA 3
+□ 1. bcryptjs y jsonwebtoken instalados ✅
+□ 2. Modelo User.js creado ✅
+□ 3. Controlador authController.js creado ✅
+□ 4. Middleware auth.js creado ✅
+□ 5. Rutas authRoutes.js creadas ✅
+□ 6. index.js actualizado ✅
+□ 7. .env con JWT_SECRET ✅
+□ 8. Registro probado ✅
+□ 9. Login probado ✅
+□ 10. Ruta protegida probada ✅
