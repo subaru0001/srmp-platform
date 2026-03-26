@@ -2,13 +2,14 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_muy_segura_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'db9d8a7861f4d38df314ce5591b6c64f';
 
 const authController = {
   // REGISTRO DE USUARIO
   register: async (req, res) => {
     try {
-      const { email, password, nombres, apellidos, telefono, rol } = req.body;
+      // ← AGREGADO: condominio_id en la desestructuración
+      const { email, password, nombres, apellidos, telefono, rol, condominio_id } = req.body;
 
       // Validar campos requeridos
       if (!email || !password || !nombres || !apellidos) {
@@ -31,22 +32,24 @@ const authController = {
       const salt = await bcrypt.genSalt(10);
       const password_hash = await bcrypt.hash(password, salt);
 
-      // Crear usuario
+      // Crear usuario ← AGREGADO: condominio_id
       const newUser = await User.create({
         email,
         password_hash,
         nombres,
         apellidos,
         telefono: telefono || null,
-        rol: rol || 'residente'
+        rol: rol || 'residente',
+        condominio_id: condominio_id || null
       });
 
-      // Generar token JWT
+      // Generar token JWT ← AGREGADO: condominioId en el payload
       const token = jwt.sign(
         { 
           userId: newUser.id, 
           email: newUser.email, 
-          role: newUser.rol 
+          role: newUser.rol,
+          condominioId: newUser.condominio_id
         },
         JWT_SECRET,
         { expiresIn: '24h' }
@@ -61,7 +64,8 @@ const authController = {
             email: newUser.email,
             nombres: newUser.nombres,
             apellidos: newUser.apellidos,
-            rol: newUser.rol
+            rol: newUser.rol,
+            condominio_id: newUser.condominio_id  // ← AGREGADO
           },
           token
         }
@@ -116,12 +120,13 @@ const authController = {
         });
       }
 
-      // Generar token JWT
+      // Generar token JWT ← AGREGADO: condominioId en el payload
       const token = jwt.sign(
         { 
           userId: user.id, 
           email: user.email, 
-          role: user.rol 
+          role: user.rol,
+          condominioId: user.condominio_id
         },
         JWT_SECRET,
         { expiresIn: '24h' }
@@ -136,7 +141,8 @@ const authController = {
             email: user.email,
             nombres: user.nombres,
             apellidos: user.apellidos,
-            rol: user.rol
+            rol: user.rol,
+            condominio_id: user.condominio_id  // ← AGREGADO
           },
           token
         }

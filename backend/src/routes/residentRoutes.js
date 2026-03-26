@@ -2,29 +2,33 @@ const express = require('express');
 const router = express.Router();
 const residentController = require('../controllers/residentController');
 const { verifyToken, checkRole } = require('../middleware/auth');
+const { scopeByCondominio } = require('../middleware/condominioScope');
 
-// Rutas protegidas - Admin y Vigilante pueden leer
+// Todas las rutas de residentes requieren autenticación y filtro por condominio
 router.get('/unit/:unitId', 
-  verifyToken, 
-  checkRole('admin', 'vigilante'), 
+  verifyToken,              // ← Requiere autenticación
+  scopeByCondominio,        // ← Aplica filtro por condominio
   residentController.listByUnit
 );
 
 router.get('/:id', 
-  verifyToken, 
+  verifyToken,              // ← Requiere autenticación
+  scopeByCondominio,        // ← Aplica filtro por condominio
   residentController.getById
 );
 
-// Rutas protegidas - Solo ADMIN puede crear/actualizar
+// Solo Admin o Super Admin puede crear/actualizar residentes
 router.post('/', 
   verifyToken, 
-  checkRole('admin'), 
+  checkRole('admin'),       // ← Solo admins
+  scopeByCondominio,        // ← Filtra por condominio del admin
   residentController.create
 );
 
 router.put('/:id', 
   verifyToken, 
-  checkRole('admin'), 
+  checkRole('admin'),       // ← Solo admins
+  scopeByCondominio,        // ← Filtra por condominio del admin
   residentController.update
 );
 
