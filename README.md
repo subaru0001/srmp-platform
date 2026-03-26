@@ -28,3 +28,13 @@
 □ 8. Registro probado ✅
 □ 9. Login probado ✅
 □ 10. Ruta protegida probada ✅
+
+📅 DÍA 4 - [FECHA]
+
+✅ COMPLETADO:
+• Arquitectura multi-condominio implementada
+• Middleware scopeByCondominio creado y probado
+• CRUD Condominios con filtrado por rol
+• CRUD Residentes con filtrado por condominio
+• Super Admin vs Admin Local funcionando
+• Pruebas exitosas en Thunder Client
