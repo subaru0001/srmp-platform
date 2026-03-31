@@ -41,12 +41,14 @@ const scopeByCondominio = (req, res, next) => {
 /**
  * Helper para aplicar el filtro de condominio a consultas SQL
  * 
- * @param {string} baseQuery - La consulta SQL base (ej: "SELECT * FROM tickets WHERE estado = $1")
+ * @param {string} baseQuery - La consulta SQL base
  * @param {Array} params - Los parámetros actuales de la consulta
  * @param {number|null} scope - El ID del condominio para filtrar (null = sin filtro)
+ * @param {string} columnName - Nombre de la columna a filtrar (default: 'condominio_id')
+ * @param {string} tableAlias - Alias de tabla para la columna (ej: 't.', 'c.', '')
  * @returns {Object} - { query: string, params: Array }
  */
-const applyCondominioScope = (baseQuery, params, scope) => {
+const applyCondominioScope = (baseQuery, params, scope, columnName = 'condominio_id', tableAlias = '') => {
   // Si no hay scope (Super Admin), retornar la query original
   if (!scope) {
     return { query: baseQuery, params };
@@ -55,8 +57,11 @@ const applyCondominioScope = (baseQuery, params, scope) => {
   // Calcular el índice del siguiente parámetro ($1, $2, $3, ...)
   const nextParamIndex = params.length + 1;
 
-  // Agregar el filtro AND condominio_id = $X
-  const filteredQuery = `${baseQuery} AND condominio_id = $${nextParamIndex}`;
+  // Construir la referencia a la columna con alias si se proporciona
+  const columnRef = tableAlias ? `${tableAlias}${columnName}` : columnName;
+  
+  // Agregar el filtro AND [alias.]condominio_id = $X
+  const filteredQuery = `${baseQuery} AND ${columnRef} = $${nextParamIndex}`;
   const filteredParams = [...params, scope];
 
   return {

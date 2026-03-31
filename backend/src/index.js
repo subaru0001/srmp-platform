@@ -5,10 +5,9 @@ require('dotenv').config();
 // Importar rutas
 const testRoutes = require('./routes/testRoutes');
 const authRoutes = require('./routes/authRoutes');
-
-// ← NUEVO: Importar rutas de condominios y residentes
 const condoRoutes = require('./routes/condoRoutes');
 const residentRoutes = require('./routes/residentRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');  // ← NUEVO: Rutas de tickets
 
 // Importar configuración de DB
 const pool = require('./config/database');
@@ -23,10 +22,9 @@ app.use(express.json());
 // Rutas
 app.use('/api/test', testRoutes);
 app.use('/api/auth', authRoutes);
-
-// ← NUEVO: Rutas de condominios y residentes
 app.use('/api/condos', condoRoutes);
 app.use('/api/residents', residentRoutes);
+app.use('/api/tickets', ticketRoutes);  // ← NUEVO: Registrar rutas de tickets
 
 // Ruta raíz
 app.get('/', (req, res) => {
@@ -44,20 +42,26 @@ app.get('/', (req, res) => {
         login: 'POST /api/auth/login',
         profile: 'GET /api/auth/profile (requiere token)'
       },
-      // ← NUEVO: Endpoints de condominios
       condos: {
-        list: 'GET /api/condos (público)',
-        getById: 'GET /api/condos/:id (público)',
+        list: 'GET /api/condos (auth + token)',
+        getById: 'GET /api/condos/:id (auth + token)',
         create: 'POST /api/condos (admin + token)',
         update: 'PUT /api/condos/:id (admin + token)',
         delete: 'DELETE /api/condos/:id (admin + token)'
       },
-      // ← NUEVO: Endpoints de residentes
       residents: {
         listByUnit: 'GET /api/residents/unit/:unitId (auth + token)',
         getById: 'GET /api/residents/:id (auth + token)',
         create: 'POST /api/residents (admin + token)',
         update: 'PUT /api/residents/:id (admin + token)'
+      },
+      tickets: {  // ← NUEVO: Endpoints de tickets
+        list: 'GET /api/tickets (auth + token)',
+        stats: 'GET /api/tickets/stats (admin + token)',
+        getById: 'GET /api/tickets/:id (auth + token)',
+        create: 'POST /api/tickets (auth + token)',
+        update: 'PUT /api/tickets/:id (auth + token)',
+        delete: 'DELETE /api/tickets/:id (admin + token)'
       }
     }
   });
@@ -86,5 +90,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`📊 Proyecto: SRMP`);
   console.log(`🔐 Autenticación JWT habilitada`);
-  console.log(`🏢 Módulos: Auth, Condos, Residents`);  // ← NUEVO
+  console.log(`🏢 Módulos: Auth, Condos, Residents, Tickets`);  // ← ACTUALIZADO
 });
