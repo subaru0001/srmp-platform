@@ -38,3 +38,17 @@
 • CRUD Residentes con filtrado por condominio
 • Super Admin vs Admin Local funcionando
 • Pruebas exitosas en Thunder Client
+
+🎯 LOGROS DEL DÍA 5 - COMPLETADOS
+
+✅ Modelo Ticket.js creado
+✅ Controlador ticketController.js corregido y funcional
+✅ Rutas ticketRoutes.js con middleware de seguridad
+✅ Middleware applyCondominioScope con alias de tabla
+✅ CRUD completo de tickets probado exitosamente
+✅ Crear ticket (residente) ✅
+✅ Crear ticket (admin para residente) ✅
+✅ Listar con paginación y filtros ✅
+✅ Actualizar estado y asignación ✅
+✅ JOINs con residentes y asignados ✅
+✅ Super Admin vs Admin Local funcionando ✅

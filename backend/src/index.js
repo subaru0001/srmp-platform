@@ -7,7 +7,8 @@ const testRoutes = require('./routes/testRoutes');
 const authRoutes = require('./routes/authRoutes');
 const condoRoutes = require('./routes/condoRoutes');
 const residentRoutes = require('./routes/residentRoutes');
-const ticketRoutes = require('./routes/ticketRoutes');  // ← NUEVO: Rutas de tickets
+const ticketRoutes = require('./routes/ticketRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');  // ← NUEVO: Rutas de notificaciones
 
 // Importar configuración de DB
 const pool = require('./config/database');
@@ -24,7 +25,8 @@ app.use('/api/test', testRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/condos', condoRoutes);
 app.use('/api/residents', residentRoutes);
-app.use('/api/tickets', ticketRoutes);  // ← NUEVO: Registrar rutas de tickets
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/notifications', notificationRoutes);  // ← NUEVO: Registrar rutas de notificaciones
 
 // Ruta raíz
 app.get('/', (req, res) => {
@@ -55,13 +57,22 @@ app.get('/', (req, res) => {
         create: 'POST /api/residents (admin + token)',
         update: 'PUT /api/residents/:id (admin + token)'
       },
-      tickets: {  // ← NUEVO: Endpoints de tickets
+      tickets: {
         list: 'GET /api/tickets (auth + token)',
         stats: 'GET /api/tickets/stats (admin + token)',
         getById: 'GET /api/tickets/:id (auth + token)',
         create: 'POST /api/tickets (auth + token)',
         update: 'PUT /api/tickets/:id (auth + token)',
         delete: 'DELETE /api/tickets/:id (admin + token)'
+      },
+      notifications: {  // ← NUEVO: Endpoints de notificaciones
+        list: 'GET /api/notifications (auth + token)',
+        unreadCount: 'GET /api/notifications/unread-count (auth + token)',
+        getById: 'GET /api/notifications/:id (auth + token)',
+        markAsRead: 'PUT /api/notifications/:id/read (auth + token)',
+        markAllAsRead: 'PUT /api/notifications/read-all (auth + token)',
+        delete: 'DELETE /api/notifications/:id (auth + token)',
+        emergency: 'POST /api/notifications/emergency (admin + token)'
       }
     }
   });
@@ -90,5 +101,8 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`📊 Proyecto: SRMP`);
   console.log(`🔐 Autenticación JWT habilitada`);
-  console.log(`🏢 Módulos: Auth, Condos, Residents, Tickets`);  // ← ACTUALIZADO
+  console.log(`🏢 Módulos: Auth, Condos, Residents, Tickets, Notifications`);  // ← ACTUALIZADO
+  if (process.env.EMAIL_USER) {
+    console.log(`📧 Email configurado: ${process.env.EMAIL_USER}`);
+  }
 });

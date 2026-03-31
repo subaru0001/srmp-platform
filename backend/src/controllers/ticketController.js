@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const Ticket = require('../models/Ticket');
 const { applyCondominioScope } = require('../middleware/condominioScope');
+const notificationService = require('../services/notificationService');  // ← AGREGADO
 
 const ticketController = {
   list: async (req, res) => {
@@ -165,6 +166,19 @@ const ticketController = {
           prioridad: prioridad || 'media'
         });
 
+        // ← ← ← AGREGADO: Enviar notificación
+        const residenteData = await pool.query(
+          `SELECT u.* FROM usuarios u
+           JOIN residentes r ON r.usuario_id = u.id
+           WHERE r.id = $1`,
+          [newTicket.residente_id]
+        );
+
+        if (residenteData.rows.length > 0) {
+          await notificationService.notifyTicketCreated(newTicket, residenteData.rows[0]);
+        }
+        // ← ← ← FIN AGREGADO
+
         res.status(201).json({
           message: '✅ Ticket creado exitosamente',
           success: true,
@@ -180,7 +194,6 @@ const ticketController = {
           });
         }
 
-        // ✅ CORREGIDO: Obtener condominio_id del residente automáticamente
         const residentData = await pool.query(
           `SELECT r.id, r.unidad_id, u.condominio_id 
            FROM residentes r
@@ -198,7 +211,6 @@ const ticketController = {
 
         condominioId = residentData.rows[0].condominio_id;
 
-        // Verificar que el admin tenga acceso a este condominio
         if (!req.isSuperAdmin && req.condominioScope && condominioId !== req.condominioScope) {
           return res.status(403).json({
             message: '❌ Acceso denegado: No puedes crear tickets en este condominio',
@@ -215,6 +227,17 @@ const ticketController = {
           subcategoria: subcategoria || null,
           prioridad: prioridad || 'media'
         });
+
+        // ← ← ← AGREGADO: Enviar notificación
+        const residenteUserData = await pool.query(
+          `SELECT u.* FROM usuarios u WHERE u.id = (SELECT usuario_id FROM residentes WHERE id = $1)`,
+          [residentData.rows[0].id]
+        );
+
+        if (residenteUserData.rows.length > 0) {
+          await notificationService.notifyTicketCreated(newTicket, residenteUserData.rows[0]);
+        }
+        // ← ← ← FIN AGREGADO
 
         res.status(201).json({
           message: '✅ Ticket creado exitosamente',
@@ -255,6 +278,17 @@ const ticketController = {
           subcategoria: subcategoria || null,
           prioridad: prioridad || 'media'
         });
+
+        // ← ← ← AGREGADO: Enviar notificación
+        const residenteUserData = await pool.query(
+          `SELECT u.* FROM usuarios u WHERE u.id = (SELECT usuario_id FROM residentes WHERE id = $1)`,
+          [residentData.rows[0].id]
+        );
+
+        if (residenteUserData.rows.length > 0) {
+          await notificationService.notifyTicketCreated(newTicket, residenteUserData.rows[0]);
+        }
+        // ← ← ← FIN AGREGADO
 
         res.status(201).json({
           message: '✅ Ticket creado exitosamente',
@@ -314,6 +348,25 @@ const ticketController = {
       }
 
       const updatedTicket = await Ticket.update(id, updateData);
+
+      // ← ← ← AGREGADO: Notificar cambio de estado
+      if (updateData.estado) {
+        const residenteData = await pool.query(
+          `SELECT u.* FROM usuarios u
+           JOIN residentes r ON r.usuario_id = u.id
+           WHERE r.id = $1`,
+          [updatedTicket.residente_id]
+        );
+        if (residenteData.rows.length > 0) {
+          await notificationService.notifyTicketStatusChanged(
+            updatedTicket, 
+            'abierto', // Podrías guardar el estado anterior si lo necesitas
+            updateData.estado, 
+            residenteData.rows[0]
+          );
+        }
+      }
+      // ← ← ← FIN AGREGADO
 
       res.json({
         message: '✅ Ticket actualizado',
