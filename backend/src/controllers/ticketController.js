@@ -1,13 +1,16 @@
 const pool = require('../config/database');
 const Ticket = require('../models/Ticket');
 const { applyCondominioScope } = require('../middleware/condominioScope');
-const notificationService = require('../services/notificationService');  // ← AGREGADO
+const notificationService = require('../services/notificationService');
 
 const ticketController = {
   list: async (req, res) => {
     try {
       const { estado, categoria, prioridad, page = 1, limit = 10 } = req.query;
+      const userRole = req.user.role;
+      const userId = req.user.userId;
 
+      // Query base con JOINs
       let baseQuery = `
         SELECT t.*, 
                u.nombres as residente_nombres, 
@@ -24,6 +27,19 @@ const ticketController = {
       let params = [];
       let paramIndex = 1;
 
+      // 🔹 FILTRADO POR ROL
+      if (userRole === 'personal') {
+        // Personal solo ve tickets asignados a él
+        baseQuery += ` AND t.asignado_a = $${paramIndex++}`;
+        params.push(userId);
+      } else if (userRole === 'residente') {
+        // Residente solo ve sus propios tickets
+        baseQuery += ` AND r.usuario_id = $${paramIndex++}`;
+        params.push(userId);
+      }
+      // Admin ve todos los tickets de su condominio (se aplica en applyCondominioScope)
+
+      // Filtros adicionales
       if (estado) {
         baseQuery += ` AND t.estado = $${paramIndex++}`;
         params.push(estado);
@@ -37,6 +53,7 @@ const ticketController = {
         params.push(prioridad);
       }
 
+      // Aplicar scope de condominio
       const { query: filteredQuery, params: finalParams } = applyCondominioScope(
         baseQuery,
         params,
@@ -45,6 +62,7 @@ const ticketController = {
         't.'
       );
 
+      // Paginación
       const offset = (page - 1) * limit;
       const limitIndex = finalParams.length + 1;
       const offsetIndex = finalParams.length + 2;
@@ -54,8 +72,21 @@ const ticketController = {
 
       const result = await pool.query(finalQuery, finalParams);
 
-      const countQuery = `SELECT COUNT(*) as total FROM tickets t WHERE t.estado != 'eliminado'`;
-      const countResult = await pool.query(countQuery);
+      // Count total (respetando filtros de rol)
+      let countQuery = `SELECT COUNT(*) as total FROM tickets t WHERE t.estado != 'eliminado'`;
+      let countParams = [];
+      let countParamIndex = 1;
+
+      // Aplicar mismo filtro de rol en el count
+      if (userRole === 'personal') {
+        countQuery += ` AND t.asignado_a = $${countParamIndex++}`;
+        countParams.push(userId);
+      } else if (userRole === 'residente') {
+        countQuery += ` AND t.residente_id IN (SELECT id FROM residentes WHERE usuario_id = $${countParamIndex++})`;
+        countParams.push(userId);
+      }
+
+      const countResult = await pool.query(countQuery, countParams);
 
       res.json({
         message: '✅ Tickets obtenidos',
@@ -90,7 +121,30 @@ const ticketController = {
         });
       }
 
-      if (!req.isSuperAdmin && req.condominioScope && ticket.condominio_id !== req.condominioScope) {
+      // Verificar permisos por rol
+      if (req.user.role === 'personal') {
+        // Personal solo puede ver tickets asignados a él
+        if (ticket.asignado_a !== req.user.userId) {
+          return res.status(403).json({
+            message: '❌ Acceso denegado: No tienes acceso a este ticket',
+            success: false
+          });
+        }
+      } else if (req.user.role === 'residente') {
+        // Residente solo puede ver sus propios tickets
+        const residentCheck = await pool.query(
+          `SELECT id FROM residentes WHERE usuario_id = $1 AND id = $2`,
+          [req.user.userId, ticket.residente_id]
+        );
+        
+        if (residentCheck.rows.length === 0) {
+          return res.status(403).json({
+            message: '❌ Acceso denegado: No tienes acceso a este ticket',
+            success: false
+          });
+        }
+      } else if (!req.isSuperAdmin && req.condominioScope && ticket.condominio_id !== req.condominioScope) {
+        // Admin solo ve tickets de su condominio
         return res.status(403).json({
           message: '❌ Acceso denegado: No tienes acceso a este ticket',
           success: false
@@ -166,7 +220,6 @@ const ticketController = {
           prioridad: prioridad || 'media'
         });
 
-        // ← ← ← AGREGADO: Enviar notificación
         const residenteData = await pool.query(
           `SELECT u.* FROM usuarios u
            JOIN residentes r ON r.usuario_id = u.id
@@ -177,7 +230,6 @@ const ticketController = {
         if (residenteData.rows.length > 0) {
           await notificationService.notifyTicketCreated(newTicket, residenteData.rows[0]);
         }
-        // ← ← ← FIN AGREGADO
 
         res.status(201).json({
           message: '✅ Ticket creado exitosamente',
@@ -228,7 +280,6 @@ const ticketController = {
           prioridad: prioridad || 'media'
         });
 
-        // ← ← ← AGREGADO: Enviar notificación
         const residenteUserData = await pool.query(
           `SELECT u.* FROM usuarios u WHERE u.id = (SELECT usuario_id FROM residentes WHERE id = $1)`,
           [residentData.rows[0].id]
@@ -237,7 +288,6 @@ const ticketController = {
         if (residenteUserData.rows.length > 0) {
           await notificationService.notifyTicketCreated(newTicket, residenteUserData.rows[0]);
         }
-        // ← ← ← FIN AGREGADO
 
         res.status(201).json({
           message: '✅ Ticket creado exitosamente',
@@ -279,7 +329,6 @@ const ticketController = {
           prioridad: prioridad || 'media'
         });
 
-        // ← ← ← AGREGADO: Enviar notificación
         const residenteUserData = await pool.query(
           `SELECT u.* FROM usuarios u WHERE u.id = (SELECT usuario_id FROM residentes WHERE id = $1)`,
           [residentData.rows[0].id]
@@ -288,7 +337,6 @@ const ticketController = {
         if (residenteUserData.rows.length > 0) {
           await notificationService.notifyTicketCreated(newTicket, residenteUserData.rows[0]);
         }
-        // ← ← ← FIN AGREGADO
 
         res.status(201).json({
           message: '✅ Ticket creado exitosamente',
@@ -319,14 +367,16 @@ const ticketController = {
         });
       }
 
-      if (!req.isSuperAdmin && req.condominioScope && ticket.condominio_id !== req.condominioScope) {
-        return res.status(403).json({
-          message: '❌ Acceso denegado: No tienes acceso a este ticket',
-          success: false
-        });
-      }
-
-      if (req.user.role === 'residente') {
+      // Verificar permisos por rol
+      if (req.user.role === 'personal') {
+        // Personal solo puede actualizar tickets asignados a él
+        if (ticket.asignado_a !== req.user.userId) {
+          return res.status(403).json({
+            message: '❌ Solo puedes actualizar tickets asignados a ti',
+            success: false
+          });
+        }
+      } else if (req.user.role === 'residente') {
         const residentCheck = await pool.query(
           `SELECT r.id FROM residentes r WHERE r.usuario_id = $1 AND r.id = $2`,
           [req.user.userId, ticket.residente_id]
@@ -345,11 +395,15 @@ const ticketController = {
             success: false
           });
         }
+      } else if (!req.isSuperAdmin && req.condominioScope && ticket.condominio_id !== req.condominioScope) {
+        return res.status(403).json({
+          message: '❌ Acceso denegado: No tienes acceso a este ticket',
+          success: false
+        });
       }
 
       const updatedTicket = await Ticket.update(id, updateData);
 
-      // ← ← ← AGREGADO: Notificar cambio de estado
       if (updateData.estado) {
         const residenteData = await pool.query(
           `SELECT u.* FROM usuarios u
@@ -360,13 +414,12 @@ const ticketController = {
         if (residenteData.rows.length > 0) {
           await notificationService.notifyTicketStatusChanged(
             updatedTicket, 
-            'abierto', // Podrías guardar el estado anterior si lo necesitas
+            'abierto',
             updateData.estado, 
             residenteData.rows[0]
           );
         }
       }
-      // ← ← ← FIN AGREGADO
 
       res.json({
         message: '✅ Ticket actualizado',
