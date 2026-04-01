@@ -8,7 +8,8 @@ const authRoutes = require('./routes/authRoutes');
 const condoRoutes = require('./routes/condoRoutes');
 const residentRoutes = require('./routes/residentRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
-const notificationRoutes = require('./routes/notificationRoutes');  // ← NUEVO: Rutas de notificaciones
+const notificationRoutes = require('./routes/notificationRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');  // ← NUEVO: Rutas del dashboard
 
 // Importar configuración de DB
 const pool = require('./config/database');
@@ -26,7 +27,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/condos', condoRoutes);
 app.use('/api/residents', residentRoutes);
 app.use('/api/tickets', ticketRoutes);
-app.use('/api/notifications', notificationRoutes);  // ← NUEVO: Registrar rutas de notificaciones
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/dashboard', dashboardRoutes);  // ← NUEVO: Registrar rutas del dashboard
 
 // Ruta raíz
 app.get('/', (req, res) => {
@@ -65,7 +67,7 @@ app.get('/', (req, res) => {
         update: 'PUT /api/tickets/:id (auth + token)',
         delete: 'DELETE /api/tickets/:id (admin + token)'
       },
-      notifications: {  // ← NUEVO: Endpoints de notificaciones
+      notifications: {
         list: 'GET /api/notifications (auth + token)',
         unreadCount: 'GET /api/notifications/unread-count (auth + token)',
         getById: 'GET /api/notifications/:id (auth + token)',
@@ -73,6 +75,12 @@ app.get('/', (req, res) => {
         markAllAsRead: 'PUT /api/notifications/read-all (auth + token)',
         delete: 'DELETE /api/notifications/:id (auth + token)',
         emergency: 'POST /api/notifications/emergency (admin + token)'
+      },
+      dashboard: {  // ← NUEVO: Endpoints del dashboard
+        adminStats: 'GET /api/dashboard/admin (admin + token)',
+        residentStats: 'GET /api/dashboard/resident (resident + token)',
+        statsByPeriod: 'GET /api/dashboard/stats-by-period?period=month (admin + token)',
+        personalStats: 'GET /api/dashboard/personal (admin + token)'
       }
     }
   });
@@ -101,7 +109,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`📊 Proyecto: SRMP`);
   console.log(`🔐 Autenticación JWT habilitada`);
-  console.log(`🏢 Módulos: Auth, Condos, Residents, Tickets, Notifications`);  // ← ACTUALIZADO
+  console.log(`🏢 Módulos: Auth, Condos, Residents, Tickets, Notifications, Dashboard`);  // ← ACTUALIZADO
   if (process.env.EMAIL_USER) {
     console.log(`📧 Email configurado: ${process.env.EMAIL_USER}`);
   }
